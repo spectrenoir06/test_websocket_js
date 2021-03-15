@@ -1,12 +1,9 @@
 require 'js'
 
 function love.load()
-
-
 end
 
 function love.draw()
-
 end
 
 function love.keypressed(key, scancode, isrepeat)
@@ -30,9 +27,9 @@ function love.keypressed(key, scancode, isrepeat)
 		)
 	elseif key == "a" then
 		local list = love.filesystem.getDirectoryItems("/")
-        for k,v in ipairs(list) do
-            print(k,v)
-        end
+		for k,v in ipairs(list) do
+			print(k,v)
+		end
 	end
 end
 

@@ -63,13 +63,18 @@ function _Request:new(isPromise, command, onDataLoaded, onError, timeout, id)
 
     function obj:getData()
         --Try to read from webdb
-        print("getData", "__temp"..self.id)
-        return love.filesystem.read("__temp"..self.id)
+        -- print("love.filesystem.read(", "__temp"..self.id)
+        if (love.filesystem.getInfo("__temp"..self.id)) then
+            return love.filesystem.read("__temp"..self.id)
+        end
     end
 
     function obj:purgeData()
         --Data must be purged for not allowing old data to be retrieved
-        love.filesystem.remove("__temp"..self.id)
+        -- print("love.filesystem.remove(", "__temp"..self.id)
+        if not love.filesystem.remove("__temp"..self.id) then
+            -- print("error remove")
+        end
     end
 
     function obj:update(dt)
@@ -78,7 +83,7 @@ function _Request:new(isPromise, command, onDataLoaded, onError, timeout, id)
 
         if((retData ~= nil and retData ~= "nil") or self.timeOut <= 0) then
             if(retData ~= nil and retData:match("ERROR") == nil) then
-                if isDebugActive then
+                if isDebugActive then   
                     print("Data has been retrieved "..retData)
                 end
                 self.onDataLoaded(retData)
@@ -119,6 +124,7 @@ function JS.newRequest(funcToCall, onDataLoaded, onError, timeout, optionalId)
         return
     end
     table.insert(__requestQueue, _Request:new(false, funcToCall, onDataLoaded, onError, timeout or 5, optionalId or _requestCount))
+    _requestCount = _requestCount + 1
 end
 
 --This function can be handled manually (in JS code)
@@ -132,6 +138,8 @@ function JS.newPromiseRequest(funcToCall, onDataLoaded, onError, timeout, option
     optionalId = optionalId or _requestCount
     funcToCall = funcToCall:gsub("_$_%(", "FS.writeFile('"..love.filesystem.getSaveDirectory().."/__temp"..optionalId.."', ")
     table.insert(__requestQueue, _Request:new(true, funcToCall, onDataLoaded, onError, timeout or 5, optionalId))
+    _requestCount = _requestCount + 1
+
 end
 
 
@@ -152,8 +160,8 @@ JS.setDefaultErrorFunction(function(id, error)
 end)
 
 
-JS.callJS(
-    JS.stringFunc(
-        "__getWebDB('/home/web_user/love');"
-    )
-)
+-- JS.callJS(
+--     JS.stringFunc(
+--         "__getWebDB('/home/web_user/love');"
+--     )
+-- )

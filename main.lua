@@ -123,7 +123,7 @@ end
 
 function love.keypressed(key, scancode, isrepeat)
 	if key == "space" then
-		send()
+		spawn(10)
 	elseif key == "q" then
 		spawn(100)
 	elseif key == "a" then

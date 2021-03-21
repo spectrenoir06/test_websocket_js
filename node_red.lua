@@ -23,7 +23,7 @@ function node_red:send()
 		function(...)
 			local t = json.decode(...)
 			for k,v in ipairs(t) do
-				print(k,v, self.onReceive)
+				-- print(k,v, self.onReceive)
 				if self.onReceive then
 					self.onReceive(v)
 				end

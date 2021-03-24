@@ -124,10 +124,10 @@ end
 
 function spawn_pkm(t)
 	local new = t or {}
-	new.body = love.physics.newBody(world, 1920/2 + (love.math.random()-0.5)*1800, -1000 + (love.math.random()-0.5)*1000, "dynamic")
+	new.body = love.physics.newBody(world, 1920/2 + (love.math.random()-0.5)*1800, -500 + (love.math.random()-0.5)*1000, "dynamic")
 	-- new.body:setFixedRotation(true)
 	-- new.body:setAngularVelocity(love.math.random()-0.5)
-	print(pkm_data)
+	-- print(pkm_data)
 	new.nb = new.nb or pkm_data.starter[love.math.random( 1, #pkm_data.starter)] --love.math.random( 1, 151)
 	new.size = t.size or 3--new.size or (love.math.random()+1)*4
 	-- print(vertice[new.nb])
@@ -198,13 +198,13 @@ function love.load()
 
 	local ground = {}
 	ground.body = love.physics.newBody(world, 1920/2, 1080+50/2)
-	ground.shape = love.physics.newRectangleShape(1920, 50)
+	ground.shape = love.physics.newRectangleShape(1920+100, 50)
 	ground.fixture = love.physics.newFixture(ground.body, ground.shape)
 
 	local top = {}
-	-- top.body = love.physics.newBody(world, 1920/2, -1080-50/2)
-	-- top.shape = love.physics.newRectangleShape(1920+100, 50)
-	-- top.fixture = love.physics.newFixture(top.body, ground.shape)
+	top.body = love.physics.newBody(world, 1920/2, -1080-50/2)
+	top.shape = love.physics.newRectangleShape(1920+100, 50)
+	top.fixture = love.physics.newFixture(top.body, ground.shape)
 
 	local left = {}
 	left.body = love.physics.newBody(world, -50/2, 0)
@@ -247,8 +247,34 @@ function pkm2json(pkm)
 	return json.encode(t)
 end
 
+tx=0
+ty=0
+
+-- restore position with the right mouse button:
+function love.mousepressed(x, y, button, istouch)
+	if button == 2 then
+		tx = 0
+		ty = 0
+	end
+end
+
 function love.draw()
 	
+	mx = love.mouse.getX()
+	my = love.mouse.getY()
+	if love.mouse.isDown(1) then
+		if not mouse_pressed then
+			mouse_pressed = true
+			dx = tx-mx
+			dy = ty-my
+		else
+			tx = mx+dx
+			ty = my+dy
+		end
+	elseif mouse_pressed then
+		mouse_pressed = false
+	end
+	love.graphics.translate(tx, ty)
 	
 	for i,v in ipairs(ditto) do
 		local r,g,b = hslToRgb((time*v.speed+v.off/20+0.20)%1, 1, 0.8)
@@ -296,39 +322,42 @@ function love.draw()
 		love.graphics.setColor(0,0,0)
 		love.graphics.setFont(font)
 		local max_w = 200
+		local x,y = v.body:getWorldCenter()
 		love.graphics.printf(
 			v.dispname or "Roger",
-			v.body:getX()-max_w/2-1,
-			v.body:getY()-15*v.size+1,
+			x-max_w/2-1,
+			y-15*v.size+1,
 			max_w,
 			"center"
 		)
 		love.graphics.setColor(v.color or {1,1,1})
 		love.graphics.printf(
 			v.dispname or "Roger",
-			v.body:getX()-max_w/2,
-			v.body:getY()-15*v.size,
+			x-max_w/2,
+			y-15*v.size,
 			max_w,
 			"center"
 		)
 	end
 
 
-	-- love.graphics.setColor(v.color,0.3)
-	-- for _, body in pairs(world:getBodies()) do
-	-- 	for _, fixture in pairs(body:getFixtures()) do
-	-- 		local shape = fixture:getShape()
-	
-	-- 		if shape:typeOf("CircleShape") then
-	-- 			local cx, cy = body:getWorldPoints(shape:getPoint())
-	-- 			love.graphics.circle("fill", cx, cy, shape:getRadius())
-	-- 		elseif shape:typeOf("PolygonShape") then
-	-- 			love.graphics.polygon("fill", body:getWorldPoints(shape:getPoints()))
-	-- 		else
-	-- 			love.graphics.line(body:getWorldPoints(shape:getPoints()))
-	-- 		end
-	-- 	end
-	-- end
+	if debug_physic then
+		love.graphics.setColor(1,1,1,0.3)
+		for _, body in pairs(world:getBodies()) do
+			for _, fixture in pairs(body:getFixtures()) do
+				local shape = fixture:getShape()
+		
+				if shape:typeOf("CircleShape") then
+					local cx, cy = body:getWorldPoints(shape:getPoint())
+					love.graphics.circle("fill", cx, cy, shape:getRadius())
+				elseif shape:typeOf("PolygonShape") then
+					love.graphics.polygon("fill", body:getWorldPoints(shape:getPoints()))
+				else
+					love.graphics.line(body:getWorldPoints(shape:getPoints()))
+				end
+			end
+		end
+	end
 	-- love.graphics.print(str, 10, 10)
 	
 end
@@ -336,6 +365,7 @@ end
 local test_id = 1
 
 function love.keypressed(key, scancode, isrepeat)
+	print(key, scancode)
 	if key == "space" then
 		-- spawn(10)?
 		spawn_pkm({
@@ -357,6 +387,8 @@ function love.keypressed(key, scancode, isrepeat)
 		for k,v in ipairs(list) do
 			print(k,v)
 		end
+	elseif key == "w" then
+		debug_physic = not debug_physic
 	end
 end
 
@@ -366,20 +398,6 @@ local next_spawn = 0
 
 function love.update(dt)
 	time = time + dt
-	-- if time > next_spawn then
-	-- 	spawn(4)
-	-- 	next_spawn = time + 0.02
-	-- end
 	node_red:update(dt)
-	
-	-- for i,v in pairs(pkm) do
-	-- 	print(i,v.body:getAngle())
-	-- 	if (v.body:getAngle()<0) then
-	-- 		v.body:applyTorque(10000)
-	-- 	else
-	-- 		v.body:applyTorque(-10000)
-	-- 	end
-	-- end
-
 	world:update(dt)
 end

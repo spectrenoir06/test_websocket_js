@@ -5,33 +5,28 @@ local json = require "json"
 local node_red = {}
 node_red.time = 0
 node_red.next_check = 0
-node_red.url = "ws://192.168.1.163:1880/ws/test/"
+node_red.url = "ws://192.168.1.163:1880"
 
-function node_red:send()
+function node_red.onError(...)
+	print("error from WS", ...)
+end
+
+function node_red:send(url, cmd, f, e)
 	local str = [[
 		const socket = new WebSocket('%s');
 		socket.addEventListener('open', function (event) {
-			socket.send('update');
+			socket.send('%s');
 		});
 		socket.addEventListener('message', function (event) {
 			_$_(event.data);
+			socket.close();
 		});
 	]]
-	str = str:format(self.url)
+	str = str:format(self.url..url, cmd, f)
 	JS.newPromiseRequest(
 		JS.stringFunc(str),
-		function(...)
-			local t = json.decode(...)
-			for k,v in ipairs(t) do
-				-- print(k,v, self.onReceive)
-				if self.onReceive then
-					self.onReceive(v)
-				end
-			end
-		end,
-		function(...)
-			print("error from js", ...)
-		end
+		f or self.onReceive,
+		e or self.onError
 	)
 end
 
@@ -41,7 +36,7 @@ function node_red:update(dt)
 		-- return
 	else
 		if self.time > self.next_check then
-			self:send()
+			self:send("/ws/update/", "update")
 			self.next_check = self.time + 1
 		end
 	end

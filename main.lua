@@ -2,6 +2,8 @@ require 'js'
 local json = require "json"
 local node_red = require "node_red"
 
+local pkm_data = require("pokemon32/pkm")
+
 local i = 0
 local str = ""
 local vertice = {}
@@ -76,7 +78,7 @@ node_red.onReceive = function(data)
 				-- print(hex(msg.userstate.color))
 				p.body:applyLinearImpulse((love.math.random()-.5)*500, -300)
 				p.color = color
-				-- p.size = p.size + 0.15
+				p.size = p.size + 0.05
 			end
 
 			if msg.userstate["custom-reward-id"] == "474e36e6-0ec6-4c22-8925-7b3076b1b181" then -- new random
@@ -94,7 +96,7 @@ node_red.onReceive = function(data)
 						dispname = msg.userstate["display-name"],
 						id = msg.userstate["user-id"],
 						color = color,
-						nb = nb
+						nb = pkm_data.starter[love.math.random( 1, #pkm_data.starter)]
 					})
 				end
 			end
@@ -125,8 +127,9 @@ function spawn_pkm(t)
 	new.body = love.physics.newBody(world, 1920/2 + (love.math.random()-0.5)*1800, -1000 + (love.math.random()-0.5)*1000, "dynamic")
 	-- new.body:setFixedRotation(true)
 	-- new.body:setAngularVelocity(love.math.random()-0.5)
-	new.nb = new.nb or love.math.random( 1, 151)
-	new.size = 3--new.size or (love.math.random()+1)*4
+	print(pkm_data)
+	new.nb = new.nb or pkm_data.starter[love.math.random( 1, #pkm_data.starter)] --love.math.random( 1, 151)
+	new.size = t.size or 3--new.size or (love.math.random()+1)*4
 	-- print(vertice[new.nb])
 
 	for i,v in ipairs(vertice[new.nb]) do
@@ -228,14 +231,15 @@ end
 function pkm2json(pkm)
 	local t = {}
 	for i,v in pairs(pkm) do
-		if v.id then
+		if not v.fake then
 			t[v.id] = {
 				-- userstate = v.userstate,
 				nb = v.nb,
 				size = v.size,
 				username = v.username,
 				dispname = v.dispname,
-				id = v.id
+				id = v.id,
+				color = v.color
 			}
 		end
 		-- print(i,v)
@@ -329,16 +333,22 @@ function love.draw()
 	
 end
 
+local test_id = 1
+
 function love.keypressed(key, scancode, isrepeat)
 	if key == "space" then
 		-- spawn(10)?
-		spawn_pkm({fake = true})
+		spawn_pkm({
+			fake = true,
+			id = tostring(test_id)
+		})
+		test_id = test_id + 1
 		save_pkm()
 	elseif key == "q" then
 		-- pkm[1].body:applyLinearImpulse((love.math.random()-.5)*500, -1000)
-		for i=#pkm,1,-1 do
-			if pkm[i].fake then
-				pkm[i] = nil
+		for k,v in pairs(pkm) do
+			if v.fake then
+				pkm[k] = nil
 			end
 		end
 		--spawn(100)

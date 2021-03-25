@@ -40,15 +40,14 @@ local function hex(hex)
 	return redColor, greenColor, blueColor
 end
 
--- function get_pkm_from_userstate(userstate)
--- 	for k,v in ipairs(pkm) do
--- 		if v.userstate and (v.userstate.username == userstate.username) then
--- 			v.userstate = userstate
--- 			return v, k
--- 		end
--- 	end
--- 	return false
--- end
+function get_pkm_from_username(username)
+	for k,v in pairs(pkm) do
+		if v.username == username then
+			return v, k
+		end
+	end
+	return false
+end
 
 function save_pkm()
 	node_red:send("/ws/save_player/", pkm2json(pkm), function(v)
@@ -63,7 +62,10 @@ node_red.onReceive = function(data)
 		if msg.type == "tchat" then
 			-- local p, id = get_pkm_from_userstate(msg.userstate)
 			local p = pkm[msg.userstate["user-id"]]
-			local r,g,b = hex(msg.userstate.color)
+			local r,g,b = 1,1,1
+			if (msg.userstate.color) then
+				r,g,b = hex(msg.userstate.color)
+			end
 			local color = {r,g,b}
 			if not p then
 				print(msg.message)
@@ -76,9 +78,15 @@ node_red.onReceive = function(data)
 				})
 			else
 				-- print(hex(msg.userstate.color))
-				p.body:applyLinearImpulse((love.math.random()-.5)*500, -300)
+				p.body:applyLinearImpulse(-love.math.random()*200*p.size, -300*p.size)
 				p.color = color
 				p.size = p.size + 0.05
+			end
+
+			if (msg.message:match("!stuck")) then
+				local p = pkm[msg.userstate["user-id"]]
+				p.x = 1500
+				spawn_pkm(p)
 			end
 
 			if msg.userstate["custom-reward-id"] == "474e36e6-0ec6-4c22-8925-7b3076b1b181" then -- new random
@@ -98,6 +106,30 @@ node_red.onReceive = function(data)
 						color = color,
 						nb = pkm_data.starter[love.math.random( 1, #pkm_data.starter)]
 					})
+				end
+			elseif msg.userstate.username == "spectrenoir06" then -- set pkm
+				if (msg.message:match("!set_nb (.+) (.+)")) then
+					local user, nb = msg.message:match("!set_nb (.+) (.+)")
+					nb = tonumber(nb)
+					if user and nb then
+						local p = get_pkm_from_username(user)
+						if nb > 0 and nb < 152 and p then
+							p.nb = nb
+							spawn_pkm(p)
+						end
+					end
+				elseif (msg.message:match("!set_size (.+) (.+)")) then
+					local user, nb = msg.message:match("!set_size (.+) (.+)")
+					nb = tonumber(nb)
+					if user and nb then
+						local p = get_pkm_from_username(user)
+						if (p) then
+							if nb > 0 and nb < 100000 then
+								p.size = nb
+								spawn_pkm(p)
+							end
+						end
+					end
 				end
 			end
 
@@ -124,8 +156,12 @@ end
 
 function spawn_pkm(t)
 	local new = t or {}
-	new.body = love.physics.newBody(world, 1920/2 + (love.math.random()-0.5)*1800, -500 + (love.math.random()-0.5)*1000, "dynamic")
-	-- new.body:setFixedRotation(true)
+	if new.body then
+		new.body:destroy()
+	end
+	new.body = love.physics.newBody(world,
+	t.x or (1920/2 + (love.math.random()-0.5)*1800), -500 + (love.math.random()-0.5)*1000,"dynamic")
+	new.body:setFixedRotation(true)
 	-- new.body:setAngularVelocity(love.math.random()-0.5)
 	-- print(pkm_data)
 	new.nb = new.nb or pkm_data.starter[love.math.random( 1, #pkm_data.starter)] --love.math.random( 1, 151)
@@ -145,7 +181,7 @@ function spawn_pkm(t)
 
 	-- new.shape = love.physics.newRectangleShape(16*new.size, 16*new.size)
 	-- new.fixture = love.physics.newFixture(new.body, new.shape, 1)
-	new.fixture:setRestitution(0.80)
+	new.fixture:setRestitution(0.90)
 	new.off = love.math.random() * 10
 	new.speed = 1 + love.math.random() / 10
 	
@@ -330,7 +366,9 @@ function love.draw()
 			max_w,
 			"center"
 		)
-		love.graphics.setColor(v.color or {1,1,1})
+		if type(v.color) == "table" then
+			love.graphics.setColor(v.color)
+		end
 		love.graphics.printf(
 			v.dispname or "Roger",
 			x-max_w/2,
@@ -378,6 +416,7 @@ function love.keypressed(key, scancode, isrepeat)
 		-- pkm[1].body:applyLinearImpulse((love.math.random()-.5)*500, -1000)
 		for k,v in pairs(pkm) do
 			if v.fake then
+				v.body:destroy()
 				pkm[k] = nil
 			end
 		end

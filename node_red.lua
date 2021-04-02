@@ -1,6 +1,5 @@
-require 'js'
+require "js"
 local json = require "json"
-
 
 local node_red = {}
 node_red.time = 0

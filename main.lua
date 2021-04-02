@@ -328,7 +328,7 @@ function love.draw()
 		)
 	end
 	
-	local frame = (math.floor(time*10)%2)+1
+	local frame = (math.floor(time*2)%2)+1
 	-- print(frame, (math.floor(time)%2))
 	
 	for i,v in pairs(pkm) do

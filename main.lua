@@ -1,12 +1,18 @@
+-- print(package.path)
+-- package.path = package.path..";./lib/?.lua;./lib/?/init.lua;./lib/?/?.lua"
+-- print(package.path)
+love.filesystem.setRequirePath("?.lua;?/init.lua;lib/?.lua;lib/?/init.lua;lib/?/?.lua")
+
 require 'js'
 local json = require "json"
 local node_red = require "node_red"
+local Pokemon = require "Pokemon"
 
 local pkm_data = require("pokemon32/pkm")
 
 local i = 0
 local str = ""
-local vertice = {}
+-- local vertice = {}
 
 function hslToRgb(h, s, l, a)
 	local r, g, b
@@ -140,94 +146,16 @@ node_red.onReceive = function(data)
 	end
 end
 
-function spawn(nb)
-	nb = nb or 1
-	for i=1,nb do
-		local new = {}
-		new.body = love.physics.newBody(world, 1920/2 + (love.math.random()-0.5)*1800, -50, "dynamic")
-		new.body:setAngularVelocity(love.math.random()-0.5)
-		new.shape = love.physics.newCircleShape(22/2)
-		new.fixture = love.physics.newFixture(new.body, new.shape, 1)
-		new.off = love.math.random() * 10
-		new.speed = 1 + love.math.random() / 10
-		table.insert(ditto, new)
-	end
-end
-
 function spawn_pkm(t)
-	local new = t or {}
-	if new.body then
-		new.body:destroy()
-	end
-	new.body = love.physics.newBody(world,
-	t.x or (1920/2 + (love.math.random()-0.5)*1800), -500 + (love.math.random()-0.5)*1000,"dynamic")
-	new.body:setFixedRotation(true)
-	-- new.body:setAngularVelocity(love.math.random()-0.5)
-	-- print(pkm_data)
-	new.nb = new.nb or pkm_data.starter[love.math.random( 1, #pkm_data.starter)] --love.math.random( 1, 151)
-	new.size = t.size or 3--new.size or (love.math.random()+1)*4
-	-- print(vertice[new.nb])
-
-	for i,v in ipairs(vertice[new.nb]) do
-		-- print(i,v)
-		local t = {}
-		for j, w in ipairs(v.shape) do
-			t[j] = (w-16) * new.size
-		end
-		local shape = love.physics.newPolygonShape(t)
-		-- new.shape = love.physics.newRectangleShape(16*new.size, 16*new.size)
-		new.fixture = love.physics.newFixture(new.body, shape, 1)
-	end
-
-	-- new.shape = love.physics.newRectangleShape(16*new.size, 16*new.size)
-	-- new.fixture = love.physics.newFixture(new.body, new.shape, 1)
-	new.fixture:setRestitution(0.90)
-	new.off = love.math.random() * 10
-	new.speed = 1 + love.math.random() / 10
-	
-	pkm[new.id] = new
-	return new
+	print(t)
+	local p = Pokemon:new(world, t)
+	pkm[p.id] = p
+	return p
 end
 
 function love.load()
-	font = love.graphics.newFont(24)
-	data = json.decode(love.filesystem.read("pokemon32/test.json"))
-	-- print(data)
-	for i=0, 150 do
-		-- print(data["pokemon32-"..i][1].shape, i+1)
-		vertice[i+1] = data["pokemon32-"..i]
-	end
-
-	img = love.graphics.newImage("ditto.png")
-	
-	quads = {}
-	for x=0, 3 do
-		table.insert(quads, love.graphics.newQuad(x*33, 0, 33, img:getHeight(), img:getDimensions()))
-	end
-
-	pkm_img = love.graphics.newImage("pokemon32/pokemon32.png")
-	pkm_img:setFilter("nearest")
-	pkm_quads = {}
-	for x=0, 150 do
-		local t = {}
-		for y=0,1 do
-			table.insert(
-				t,
-				love.graphics.newQuad(
-					x*32,
-					y*32,
-					32,
-					32,
-					pkm_img:getDimensions()
-				)
-			)
-		end
-		table.insert(pkm_quads, t)
-	end
 	pkm = {}
 
-	ditto = {}
-	
 	love.physics.setMeter(64)
 	world = love.physics.newWorld(0, 9.81*64, true)
 
@@ -312,70 +240,13 @@ function love.draw()
 	end
 	love.graphics.translate(tx, ty)
 	
-	for i,v in ipairs(ditto) do
-		local r,g,b = hslToRgb((time*v.speed+v.off/20+0.20)%1, 1, 0.8)
-		love.graphics.setColor(r, g, b)
-		love.graphics.draw(
-			img,
-			quads[(math.floor((time*v.speed+v.off)*10)%(#quads))+1],
-			v.body:getX(),
-			v.body:getY(),
-			v.body:getAngle(),
-			1,
-			1,
-			33/2,
-			40/2
-		)
-	end
-	
-	local frame = (math.floor(time*2)%2)+1
-	-- print(frame, (math.floor(time)%2))
 	
 	for i,v in pairs(pkm) do
-		if v.rainbow then
-			local r,g,b = hslToRgb((time*v.speed+v.off/20+0.20)%1, 1, 0.8)
-			love.graphics.setColor(r, g, b)
-		else
-			love.graphics.setColor(1, 1, 1)
-		end
-		love.graphics.draw(
-			pkm_img,
-			pkm_quads[v.nb][frame],
-			v.body:getX(),
-			v.body:getY(),
-			v.body:getAngle(),
-			v.size,
-			v.size,
-			(32/2),
-			(32/2)
-		)
-
-		-- love.graphics.setColor(1,0,0)
-		-- love.graphics.circle("fill", v.body:getX(), v.body:getY(), 4)
+		v:drawSprite()
 	end
 
 	for i,v in pairs(pkm) do
-		love.graphics.setColor(0,0,0)
-		love.graphics.setFont(font)
-		local max_w = 200
-		local x,y = v.body:getWorldCenter()
-		love.graphics.printf(
-			v.dispname or "Roger",
-			x-max_w/2-1,
-			y-15*v.size+1,
-			max_w,
-			"center"
-		)
-		if type(v.color) == "table" then
-			love.graphics.setColor(v.color)
-		end
-		love.graphics.printf(
-			v.dispname or "Roger",
-			x-max_w/2,
-			y-15*v.size,
-			max_w,
-			"center"
-		)
+		v:drawName()
 	end
 
 
@@ -439,4 +310,7 @@ function love.update(dt)
 	time = time + dt
 	node_red:update(dt)
 	world:update(dt)
+	for i,v in pairs(pkm) do
+		v:update(dt)
+	end
 end

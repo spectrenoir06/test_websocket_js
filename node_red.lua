@@ -4,7 +4,7 @@ local json = require "json"
 local node_red = {}
 node_red.time = 0
 node_red.next_check = 0
-node_red.url = "ws://192.168.1.163:1880"
+node_red.url = "ws://192.168.1.4:1880"
 
 function node_red.onError(...)
 	print("error from WS", ...)

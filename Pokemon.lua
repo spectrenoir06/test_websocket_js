@@ -25,7 +25,6 @@ for x=0, 150 do
 end
 
 function Pokemon:initialize(world, t)
-	-- self.sweetness = sweetness
 
 	local t = t or {}
 
